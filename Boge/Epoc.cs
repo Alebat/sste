@@ -148,7 +148,7 @@ namespace WS_STE
                 }
                 catch (Exception e)
                 {
-                    MessageBox.Show("An error occurred while connecting to the headset, check your c++ runtime distributions and dlls.\n\nWARNING: The headset's data won't be available until this problem is not fixed.\n\n" + e.Message, "Runtime Dll Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(Properties.Resources.EPOCDllErrorMessage + e.Message, Properties.Resources.EPOCDllErrorTitle, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
                 finally
                 {
