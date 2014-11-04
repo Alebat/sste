@@ -146,12 +146,9 @@ namespace WS_STE
                     _scanner.IsBackground = true;
                     _scanner.Start();
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    Dispose();
-#if DEBUG
-                    throw;
-#endif
+                    MessageBox.Show("An error occurred while connecting to the headset, check your c++ runtime distributions and dlls.\n\nWARNING: The headset's data won't be available until this problem is not fixed.\n\n" + e.Message, "Runtime Dll Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
                 finally
                 {
