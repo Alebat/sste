@@ -251,34 +251,38 @@ namespace WS_STE
                 a = b;
             return a;
         }
-        private void LoadSounds(string sec, out SoundBox sbl, bool separated = true)
+        private void LoadSounds(string iniSection, out SoundBox sbl, bool separated = true)
         {
-            sbl = new SoundBox(
-                        Program._settings.GetValue("SoundBlock", "shuffleSounds") == "true",
-                        Program._settings.GetValue("SoundBlock", "shuffleDirs") == "true", separated);
-            sbl.Shuffle();
-            foreach (string v in Program._settings.GetValues(sec))
+            sbl = new SoundBox(); // WAS shuffling settings from ini and separated as args
+            foreach (string categoryDir in Program._settings.GetValues(iniSection))
             {
                 try
                 {
-                    bool d = Directory.Exists(v);
-                    List<string> a = new List<string>(Directory.EnumerateFiles(v));
-                    if (separated)
+                    if (Directory.Exists(categoryDir))
                     {
-                        List<string> b = new List<string>((a.Count + 1) / 2);
-                        a.Shuffle();
-                        for (int i = 0; i < (a.Count + 1) / 2; i++)
+                        List<string> contents = new List<string>(Directory.EnumerateFiles(categoryDir));
+                        // WAS separated
+                        foreach (string soundsDir in contents)
                         {
-                            b.Add(a[0]);
-                            a.RemoveAt(0);
+                            try
+                            {
+                                if (Directory.Exists(soundsDir))
+                                {
+                                    List<string> contents2 = new List<string>(Directory.EnumerateFiles(soundsDir));
+                                    //            sounds,    subcatdir name
+                                    sbl.AddFolder(contents2, categoryDir+'>'+soundsDir);
+                                }
+                            }
+                            catch (Exception e)
+                            {
+                                CriticalErrorMessage(String.Format("Error loading sounds directory:\n{0}\n{1}\n\nSee [{3}] '{2}'", categoryDir, e.Message, Program._settings.SourceFile, iniSection));
+                            }
                         }
-                        sbl.AddFolder(b, v);
                     }
-                    sbl.AddFolder(a, v);
                 }
                 catch (Exception e)
                 {
-                    CriticalErrorMessage(String.Format("Error loading trial sounds directory:\n{0}\n{1}\n\nSee [{3}] '{2}'", v, e.Message, Program._settings.SourceFile, sec));
+                    CriticalErrorMessage(String.Format("Error loading sounds directory:\n{0}\n{1}\n\nSee [{3}] '{2}'", categoryDir, e.Message, Program._settings.SourceFile, iniSection));
                 }
             }
         }

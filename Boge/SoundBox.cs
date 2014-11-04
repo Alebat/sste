@@ -19,33 +19,33 @@ namespace WS_STE
         double _lastLoadingTime = -1;
         int _cf = 0;
         int _cs = 0;
-        bool _splitted;
 
         /// <summary>
         /// Ctor master
         /// </summary>
-        public SoundBox(bool shufFiles, bool shufDirs, bool splittedBy2)
+        public SoundBox()
         {
-            ShuffleDirs = shufDirs;
-            ShuffleFiles = shufFiles;
+            //                  folder -> file
+            //                  key    -> Value
+            //             List string -> list string
+            //                                 string
+            //
+            //                  string -> list string
+            //                                 string
             _folders = new List<KeyValuePair<string, List<string>>>();
-            _splitted = splittedBy2;
         }
-
-        public bool ShuffleFiles { get; protected set; }
-
-        public bool ShuffleDirs { get; protected set; }
 
         /// <summary>
         /// Aggiunge i suoni da un elenco.
         /// </summary>
-        /// <param name="els">Percorsi da aggiungere.</param>
-        public void AddFolder(List<string> els, string fol = ".")
+        /// <param name="folders">Percorsi da aggiungere.</param>
+        public void AddFolder(List<string> folders, string fol = ".")
         {
+            // Se le contiene già
             if (_folders.FindAll(a => fol == a.Key).Count == 0)
-                _folders.Add(new KeyValuePair<string, List<string>>(fol, els));
+                _folders.Add(new KeyValuePair<string, List<string>>(fol, folders));
             else
-                _folders.Find(a => a.Key == fol).Value.AddRange(els);
+                _folders.Find(a => a.Key == fol).Value.AddRange(folders);
         }
 
         /// <summary>
@@ -53,19 +53,10 @@ namespace WS_STE
         /// </summary>
         public void Shuffle()
         {
-            if (ShuffleFiles)
-                foreach (KeyValuePair<string, List<string>> i in _folders)
-                    i.Value.Shuffle();
-            if (ShuffleDirs)
-            {
-                Comparison<KeyValuePair<string, List<string>>> c;
-                if (_splitted)
-                    c = (a, b) => a.Key == b.Key ? 0 : 1;
-                else
-                    c = (a, b) => a.Key.Remove(a.Key.Length - 1) == b.Key.Remove(b.Key.Length - 1) ? 0 : 1;
-                    
-                _folders.Shuffle(c);
-            }
+            Comparison<KeyValuePair<string, List<string>>> c;
+            // Only the first part equal => the same category
+            c = (a, b) => a.Key.Split('>')[0] == b.Key.Split('>')[0] ? 0 : 1;
+            _folders.Shuffle(c);
             _cf = 0;
             _cs = 0;
         }

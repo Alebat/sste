@@ -42,6 +42,12 @@ namespace WS_STE
             return (double)(value - new DateTime(1970, 1, 1, 0, 0, 0, 0).ToLocalTime()).TotalSeconds;
         }
 
+        /// <summary>
+        /// Shuffles using a new random with no parameters and allow to specify wich elements have not to be consecutive.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="nonConsecutive">Predicate of equality (0,1) that asserts (0) when two elements can not be consecutive.</param>
         public static void Shuffle<T>(this IList<T> list, Comparison<T> nonConsecutive = null)
         {
             Random rng = new Random();
@@ -67,6 +73,13 @@ namespace WS_STE
             }
         }
 
+        /// <summary>
+        /// Searchs for the first pair of consecutive equal elements.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="list"></param>
+        /// <param name="equality">Needed equality comparer</param>
+        /// <returns></returns>
         public static int Consec<T>(this IList<T> list, Comparison<T> equality)
         {
             for (int i = 0; i < list.Count - 1; i++)
