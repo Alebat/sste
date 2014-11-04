@@ -1,0 +1,13 @@
+﻿13-11-25;3.2
+-Fix messaggio MessageBox errore no ini file, Program.cs
+-Test per errore pausa finale di troppo:
+	-BugSegnalato: le pause vengono saltate: il valore di maxSoundsToPlay finisce nel tempo di durata della pausa (d:20 suoni ==> 20ms)
+		-Fixed: cambiato nome chiave nel caricamento da ini, MainForm.cs
+	-BugSegnalato: avviata pausa anche se lo stato successivo è quello finale (Pausa -> Spacebar -> (no suoni ma) Test Concluso)
+		-Fixed: cambiato controllo ultimo ciclo (_ultimoCiclo), Triggerers.cs
+-NF: feedback consenso utente per inizio cicli (afPause)
+	-Aggiunta di un'immagine simile a quella di fissazione ma con colori diversi durante l'attesa 'afPause'
+		-Immagine a sfongo grigio default con punto più grosso di '1px' colore turchese, nome attuale 'waitdot.png'
+
+14-03-05;4.0B
+-Inizio modifiche per versione nuova
