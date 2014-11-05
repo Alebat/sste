@@ -16,7 +16,6 @@ namespace WS_STE
         SoundPlayer _next;
         List<KeyValuePair<string, List<string>>> _folders;
         string _lastSnd;
-        double _lastLoadingTime = -1;
         int _cf = 0;
         int _cs = 0;
 
@@ -62,14 +61,14 @@ namespace WS_STE
         }
 
         /// <summary>
-        /// Carica un suono e lo toglie dalla lista se <see cref="PlayOnce"/>.
+        /// Carica un suono e lo toglie dalla lista.
         /// False se i suoni sono finiti nella dir, null se sono finite le dir.
         /// </summary>
         /// <returns></returns>
         public bool? LoadNext()
         {
-            if (_cf < _folders.Count)
-                if (_cs < _folders[_cf].Value.Count)
+            if (_cf < _folders.Count) // ci sono cartelle
+                if (_cs < _folders[_cf].Value.Count) // ci sono files nella cartella
                 {
                     _lastSnd = _folders[_cf].Value[_cs];
                     _next = new SoundPlayer(_lastSnd);

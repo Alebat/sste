@@ -101,6 +101,9 @@
     <Content Include="img\istress.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="img\ivalence.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="main.debug.ini">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
@@ -177,9 +180,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="img\iarousal.png">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="img\ivalence.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="sounds\asdb\1\XF_clapS01.wav">
@@ -458,94 +458,94 @@
     <Content Include="sounds\tdb\New folder - Copy\XF_SnrClassic05.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %282%29\XF_HatReal02.wav">
+    <Content Include="sounds\tdc\Copy %282%29\XF_HatReal02.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %282%29\XF_HatReal03.wav">
+    <Content Include="sounds\tdc\Copy %282%29\XF_HatReal03.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %282%29\XF_HatReal04.wav">
+    <Content Include="sounds\tdc\Copy %282%29\XF_HatReal04.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %282%29\XF_HatReal05.wav">
+    <Content Include="sounds\tdc\Copy %282%29\XF_HatReal05.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %282%29\XF_HatReal06.wav">
+    <Content Include="sounds\tdc\Copy %282%29\XF_HatReal06.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %283%29\XF_HatReal03.wav">
+    <Content Include="sounds\tdc\Copy %283%29\XF_HatReal03.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %283%29\XF_HatReal04.wav">
+    <Content Include="sounds\tdc\Copy %283%29\XF_HatReal04.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %283%29\XF_HatReal05.wav">
+    <Content Include="sounds\tdc\Copy %283%29\XF_HatReal05.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %283%29\XF_HatReal06.wav">
+    <Content Include="sounds\tdc\Copy %283%29\XF_HatReal06.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %283%29\XF_HatReal07.wav">
+    <Content Include="sounds\tdc\Copy %283%29\XF_HatReal07.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %284%29\XF_HatReal04.wav">
+    <Content Include="sounds\tdc\Copy %284%29\XF_HatReal04.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %284%29\XF_HatReal05.wav">
+    <Content Include="sounds\tdc\Copy %284%29\XF_HatReal05.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %284%29\XF_HatReal06.wav">
+    <Content Include="sounds\tdc\Copy %284%29\XF_HatReal06.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %284%29\XF_HatReal07.wav">
+    <Content Include="sounds\tdc\Copy %284%29\XF_HatReal07.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %284%29\XF_HatReal08.wav">
+    <Content Include="sounds\tdc\Copy %284%29\XF_HatReal08.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %285%29\XF_HatReal05.wav">
+    <Content Include="sounds\tdc\Copy %285%29\XF_HatReal05.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %285%29\XF_HatReal06.wav">
+    <Content Include="sounds\tdc\Copy %285%29\XF_HatReal06.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %285%29\XF_HatReal07.wav">
+    <Content Include="sounds\tdc\Copy %285%29\XF_HatReal07.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %285%29\XF_HatReal08.wav">
+    <Content Include="sounds\tdc\Copy %285%29\XF_HatReal08.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %285%29\XF_HatReal09.wav">
+    <Content Include="sounds\tdc\Copy %285%29\XF_HatReal09.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %286%29\XF_HatReal06.wav">
+    <Content Include="sounds\tdc\Copy %286%29\XF_HatReal06.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %286%29\XF_HatReal07.wav">
+    <Content Include="sounds\tdc\Copy %286%29\XF_HatReal07.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %286%29\XF_HatReal08.wav">
+    <Content Include="sounds\tdc\Copy %286%29\XF_HatReal08.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %286%29\XF_HatReal09.wav">
+    <Content Include="sounds\tdc\Copy %286%29\XF_HatReal09.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy %286%29\XF_HatReal10.wav">
+    <Content Include="sounds\tdc\Copy %286%29\XF_HatReal10.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy\XF_HatReal01.wav">
+    <Content Include="sounds\tdc\Copy\XF_HatReal01.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy\XF_HatReal02.wav">
+    <Content Include="sounds\tdc\Copy\XF_HatReal02.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy\XF_HatReal03.wav">
+    <Content Include="sounds\tdc\Copy\XF_HatReal03.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy\XF_HatReal04.wav">
+    <Content Include="sounds\tdc\Copy\XF_HatReal04.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="sounds\tdc\New folder - Copy\XF_HatReal05.wav">
+    <Content Include="sounds\tdc\Copy\XF_HatReal05.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="texts.debug.it-IT.txt">

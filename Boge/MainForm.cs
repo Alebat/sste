@@ -83,7 +83,6 @@ namespace WS_STE
         bool _eegEnabled = false;
         bool _recordTrial = false;
         int _currentRating = 0;
-        int _repeatExperimentTimes = 1;
         int _repeatedExperimentTimes = 0;
         int _ciclo = 0;
         DateTime _lastRatInit = DateTime.Now;
@@ -120,6 +119,7 @@ namespace WS_STE
             {
                 if (file != null)
                 {
+                    // TODO 8 no need foreach
                     foreach (string item in File.ReadAllText(file).Split('#'))
                         _messages.Add(item);
                     if (_messages.Count < _expectedTexts)
@@ -132,7 +132,6 @@ namespace WS_STE
             { CriticalErrorMessage(String.Format("Error loading lang file:\n{1}\nSee [Local] 'lang' in {0}\n{2}", Program._settings.SourceFile, file, e.Message)); }
             
             // trigs
-            _repeatExperimentTimes = Program._settings.GetValue("Experiment", "repetitions", 1);
             _trigTrial = new Triggerer(int.MaxValue, int.MaxValue, Program._settings.GetValue("Trial", "doTheTrial") == "true" ? Get("Trial", "cycles", 0) : 0, 0);
             _trigTest = new Triggerer(Get("Experiment", "sessionCycles", int.MaxValue), Get("Experiment", "sessionMinutes", int.MaxValue / 60) * 60, Get("Experiment", "maxSoundsToPlay", int.MaxValue), Get("Experiment", "breakDuration", -1));
             try
@@ -260,24 +259,33 @@ namespace WS_STE
                 {
                     if (Directory.Exists(categoryDir))
                     {
-                        List<string> contents = new List<string>(Directory.EnumerateFiles(categoryDir));
+                        List<string> dcontents = new List<string>(Directory.EnumerateDirectories(categoryDir));
+                        List<string> fcontents = new List<string>(Directory.EnumerateFiles(categoryDir));
                         // WAS separated
-                        foreach (string soundsDir in contents)
-                        {
-                            try
+                        if (dcontents.Count > 0)
+                            foreach (string soundsDir in dcontents)
                             {
-                                if (Directory.Exists(soundsDir))
+                                try
                                 {
                                     List<string> contents2 = new List<string>(Directory.EnumerateFiles(soundsDir));
                                     //            sounds,    subcatdir name
-                                    sbl.AddFolder(contents2, categoryDir+'>'+soundsDir);
+                                    sbl.AddFolder(contents2, categoryDir + '>' + soundsDir);
                                 }
+                                catch (Exception e)
+                                {
+                                    CriticalErrorMessage(String.Format("Error loading sounds directory:\n{0}\n{1}\n\nSee [{3}] '{2}'", categoryDir, e.Message, Program._settings.SourceFile, iniSection));
+                                }
+                            }
+                        else
+                            try
+                            {
+                                //            sounds,    subcatdir name
+                                sbl.AddFolder(fcontents, "?" + '>' + categoryDir);
                             }
                             catch (Exception e)
                             {
                                 CriticalErrorMessage(String.Format("Error loading sounds directory:\n{0}\n{1}\n\nSee [{3}] '{2}'", categoryDir, e.Message, Program._settings.SourceFile, iniSection));
                             }
-                        }
                     }
                 }
                 catch (Exception e)
@@ -351,6 +359,8 @@ namespace WS_STE
             ActivePanel = panelData;
             _repeatedExperimentTimes = 0;
             _ciclo = 0;
+            _sbTest.Shuffle();
+            _sbTrial.Shuffle();
         }
         private void NextState(int time = 0)
         {
@@ -376,7 +386,6 @@ namespace WS_STE
                 case ExperimentState.PreTrial:
                     _state = ExperimentState.Trial;
                     _trigTrial.Start();
-                    _sbTrial.Shuffle();
                     _ciclo = 0;
                     break;
                 case ExperimentState.Trial:
@@ -390,8 +399,6 @@ namespace WS_STE
                     break;
                 case ExperimentState.PreTest:
                     _state = ExperimentState.PreTestRest;
-                    ShowNotice(_messages[/*BASELINE*/4], Get("RestingBlock", "mainResting", 1000));
-                    _sbTest.Shuffle();
                     _ciclo = 0;
                     break;
                 case ExperimentState.PreTestRest:
@@ -407,24 +414,16 @@ namespace WS_STE
                     if (_trigTest.Finish)
                     {
                         _repeatedExperimentTimes++;
-                        if (_repeatedExperimentTimes < _repeatExperimentTimes)
-                        {
-                            _trigTest.Reset();
-                            _sbTest.Shuffle();
-                            _trigTest.Start();
-                        }
-                        else
-                        {
-                            _state = ExperimentState.Idle;
-                            _eegEnabled = false;
-                            ShowNotice(_messages[/*END*/7]);
-                        }
+                        _state = ExperimentState.Idle;
+                        _eegEnabled = false;
+                        ShowNotice(_messages[/*END*/6]);
                     }
                     else
                         _trigTest.Resume();
                     break;
                 case ExperimentState.Idle:
-                    SetNewExperiment();
+                    // WAS Restart Point
+                    Application.Exit();
                     break;
                 default:
                     break;
@@ -436,7 +435,7 @@ namespace WS_STE
             {
                 case "GeneralBreak":
                     _state = ExperimentState.Break;
-                    ShowNotice(_messages[/*BRK*/6], Get("Experiment", "breakDuration", -1));
+                    ShowNotice(_messages[/*BRK*/5], Get("Experiment", "breakDuration", -1));
                     break;
                 case "GeneralFinish":
                     NextState();
@@ -466,10 +465,10 @@ namespace WS_STE
                     ActivePanel = panelSound;
                     if (_state == ExperimentState.Test || _recordTrial)
                     {
-                        string[] f = snd.LastLoaded.Split('/', '\\');
+                        int f = Math.Max(snd.LastLoaded.LastIndexOf('/'), snd.LastLoaded.LastIndexOf('\\'));
                         _soundsFile.AddValue((_state == ExperimentState.Trial ? -1 : 1) * _ciclo);
-                        _soundsFile.AddValue(f[f.Length - 2]);
-                        _soundsFile.AddValue(f[f.Length - 1]);
+                        _soundsFile.AddValue(snd.LastLoaded.Remove(f).Replace('\\', '/'));
+                        _soundsFile.AddValue(snd.LastLoaded.Substring(f + 1));
                         _soundsFile.AddTimestamp();
                     }
                     snd.Play();
@@ -530,7 +529,7 @@ namespace WS_STE
                         _blocksFile.AddTimestamp();
                     if ((_state == ExperimentState.Trial && Program._settings.GetValue("RestingBlock", "useInTrial") == "true") || _state == ExperimentState.Test)
                     {
-                        ShowNotice(_messages[/*BLK-REST*/5]);
+                        ShowNotice(_messages[/*BLK-REST*/4]);
                     }
                     break;
             }

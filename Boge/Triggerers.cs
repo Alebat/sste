@@ -65,7 +65,6 @@ namespace WS_STE
     /// </summary>
     public class Triggerer : IDisposable
     {
-        volatile bool _working;
         Semaphore _pausa = new Semaphore(0, 1);
         volatile bool _inPausa = false;
         volatile bool _ultimoCiclo = false;

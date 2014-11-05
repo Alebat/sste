@@ -9,7 +9,6 @@ namespace WS_STE
     class IniFile
     {
         Dictionary<string, Dictionary<string, string>> _main;
-        string _saveFile;
 
         public string SourceFile { get; private set; }
 
