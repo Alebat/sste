@@ -305,7 +305,7 @@ namespace WS_STE
             // tsSessionCreation, name, surname, date_of_birth, gender, trialCycles, place, notes
             char separator = (char)Get("Data","ordCharSeparator", 45);
             File.WriteAllText(_user.FullName + "/" + Program._settings.GetValue("Data", "meta\\f"), String.Format("{0}{8}{1}{8}{2}{8}{3}{8}{4}{8}{5}{8}{6}{8}{7}",
-                DateTime.Now.ToUnixTimestamp(),
+                DateTime.UtcNow.ToUnixTimestamp(),
                 textBoxName.Text.Replace("\\", "\\\\").Replace(";", "\\,").Replace("\n", "\\n"),
                 textBoxSurname.Text.Replace("\\", "\\\\").Replace(";", "\\,").Replace("\n", "\\n"),
                 maskedTextBoxBirthDate.Text,

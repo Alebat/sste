@@ -46,7 +46,7 @@ namespace WS_STE
                 throw new ArgumentException(String.Format("Numero errato {0}/{1} di argomenti.", data.Length, TotalChannels));
             else
             {
-                _file.Write("{0}", DateTime.Now.ToUnixTimestamp());
+                _file.Write("{0}", DateTime.UtcNow.ToUnixTimestamp());
                 foreach (object el in data)
                     _file.Write("{1}{0}", el, Separator);
                 Endline();
@@ -70,7 +70,7 @@ namespace WS_STE
 
         public void AddTimestamp()
         {
-            AddValue(DateTime.Now.ToUnixTimestamp());
+            AddValue(DateTime.UtcNow.ToUnixTimestamp());
         }
 
         public void Endline()

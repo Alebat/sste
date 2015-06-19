@@ -8,7 +8,7 @@ namespace WS_STE
     static class Program
     {
         public static IniFile _settings;
-        public const string short_version = "4.2.4";
+        public const string short_version = "5.7.2";
 
         [STAThread]
         static void Main()
@@ -39,7 +39,7 @@ namespace WS_STE
 
         public static double ToUnixTimestamp(this DateTime value)
         {
-            return (double)(value - new DateTime(1970, 1, 1, 0, 0, 0, 0).ToLocalTime()).TotalSeconds;
+            return (double)(value - new DateTime(1970, 1, 1, 0, 0, 0, 0)).TotalSeconds;
         }
 
         /// <summary>

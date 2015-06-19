@@ -104,10 +104,10 @@ namespace WS_STE
                                 i -= _repeatLast;
                                 _repeatLast = 0;
                             }
-                            if ((_doPauseTillB * 10000000L + _doPauseTill) > DateTime.Now.ToUnixTimestamp() * 1000)
+                            if ((_doPauseTillB * 10000000L + _doPauseTill) > DateTime.UtcNow.ToUnixTimestamp() * 1000)
                             {
                                 _inPausa = true;
-                                _pausa.WaitOne((int)((_doPauseTillB * 10000000L + _doPauseTill) - DateTime.Now.ToUnixTimestamp() * 1000));
+                                _pausa.WaitOne((int)((_doPauseTillB * 10000000L + _doPauseTill) - DateTime.UtcNow.ToUnixTimestamp() * 1000));
                                 _inPausa = false;
                             }
                         }
