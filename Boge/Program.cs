@@ -8,7 +8,7 @@ namespace WS_STE
     static class Program
     {
         public static IniFile _settings;
-        public const string short_version = "5.7.2";
+        public const string short_version = "6.0.1";
 
         [STAThread]
         static void Main()
@@ -19,9 +19,9 @@ namespace WS_STE
             {
                 _settings = new IniFile(
 #if DEBUG
-                    "main.debug.ini"
+                "main.debug.ini"
 #endif
-                    );
+                );
             }
             catch (Exception)
             {
@@ -33,7 +33,10 @@ namespace WS_STE
             if (!exec)
             {
                 Application.EnableVisualStyles();
-                Application.Run(new MainForm());
+                using (MainForm f = new MainForm())
+                {
+                    Application.Run(new MainForm());
+                }
             }
         }
 

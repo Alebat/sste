@@ -12,11 +12,12 @@ namespace WS_STE
         public string Name { get; private set; }
         public char Min { get; private set; }
         public char Max { get; private set; }
+        public int Duration { get; private set; }
 
         public Rating(string text)
         {
             string[] t = text.Split(',');
-            if (t.Length != 4)
+            if (t.Length != 5)
                 throw new ArgumentException("Numero di token errato per il tipo rating (nome,img,min,max)");
             else
             {
@@ -26,6 +27,7 @@ namespace WS_STE
                     Image = Image.FromFile(t[1]);
                     Min = t[2][0];
                     Max = t[3][0];
+                    Duration = Int32.Parse(t[4]);
                 }
                 catch (FileNotFoundException e)
                 {

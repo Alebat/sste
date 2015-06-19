@@ -19,6 +19,8 @@ namespace WS_STE
         int _cf = 0;
         int _cs = 0;
 
+        public int Count { get; set; }
+
         /// <summary>
         /// Ctor master
         /// </summary>

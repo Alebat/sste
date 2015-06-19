@@ -53,7 +53,7 @@
             this.labelNotice = new System.Windows.Forms.Label();
             this.panelSound = new System.Windows.Forms.Panel();
             this.linkLabel2 = new System.Windows.Forms.LinkLabel();
-            this.timerSpacebar = new System.Windows.Forms.Timer(this.components);
+            this.timerRating = new System.Windows.Forms.Timer(this.components);
             this.panelFix = new System.Windows.Forms.Panel();
             this.linkLabel1 = new System.Windows.Forms.LinkLabel();
             this.panelRating = new System.Windows.Forms.Panel();
@@ -365,8 +365,8 @@
             // 
             // timerSpacebar
             // 
-            this.timerSpacebar.Interval = 5000;
-            this.timerSpacebar.Tick += new System.EventHandler(this.timerSpacebar_Tick);
+            this.timerRating.Interval = 5000;
+            this.timerRating.Tick += new System.EventHandler(this.timerSpacebar_Tick);
             // 
             // panelFix
             // 
@@ -569,7 +569,7 @@
         private System.Windows.Forms.Panel panelNotice;
         private System.Windows.Forms.Label labelNotice;
         private System.Windows.Forms.Panel panelSound;
-        private System.Windows.Forms.Timer timerSpacebar;
+        private System.Windows.Forms.Timer timerRating;
         private System.Windows.Forms.LinkLabel linkLabel2;
         private System.Windows.Forms.Panel panelFix;
         private System.Windows.Forms.LinkLabel linkLabel1;

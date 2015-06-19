@@ -7,22 +7,19 @@ using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using Cursorr=System.Windows.Forms.Cursor;
+using System.Threading;
 
 namespace WS_STE
 {
-    public partial class MainForm : Form
+    public partial class MainForm : Form, IDisposable
     {
         // info const
         const int _expectedTexts = 6;
 
-        // tipi aux
-        enum ExperimentState { Setup, Start, PreTrial, Trial, PreTest,PreTestRest, Break, Test, Idle }
-
         // std
         Random rnd = new Random();
         // inst
-        Triggerer _trigTrial;
-        Triggerer _trigTest;
+        EventsMan _evt;
         SoundBox _sbTrial;
         SoundBox _sbTest;
         TimeDataFile _blocksFile;
@@ -38,14 +35,14 @@ namespace WS_STE
         Image _batEmp;
         Image _batRed;
         Image _fixDot;
-        Image _waitDot;
+        Image _waitImg;
         Image _restImg;
         List<List<Button>> _ratingsButtons;
+        Semaphore nextRatingMutex = new Semaphore(1, 1);
         // info
         DirectoryInfo _saveIn;
         DirectoryInfo _user;
         // stato
-        ExperimentState _state = ExperimentState.Setup;
         Panel _firstPanel;
         Panel _ap;
         Panel ActivePanel
@@ -81,10 +78,10 @@ namespace WS_STE
             }
         }
         bool _eegEnabled = false;
-        bool _recordTrial = false;
+        bool _practiceRecord = false;
+        bool _firstRecord = false;
+        bool _secondRecord = false;
         int _currentRating = 0;
-        int _repeatedExperimentTimes = 0;
-        int _ciclo = 0;
         DateTime _lastRatInit = DateTime.Now;
 
         // ctor
@@ -98,10 +95,6 @@ namespace WS_STE
             panelFix.Dock = DockStyle.Fill;
             panelSound.Dock = DockStyle.Fill;
             panelRating.Dock = DockStyle.Fill;
-            // evt link
-            Epoc.ConnectedChanged += new EpocConnectionCallback(AEpoc_ConnectedChanged);
-            Epoc.QualityDataAvailable += new EpocCallback(AEpoc_QualityDataAvailable);
-            Epoc.SensorsDataAvailable += new EpocCallback(AEpoc_SensorsDataAvailable);
             ResumeLayout();
         }
 
@@ -109,7 +102,7 @@ namespace WS_STE
         private void InitializingINIErrorSensitivePart()
         {
             // snds
-            LoadSounds("Sounds.Trial", out _sbTrial);
+            LoadSounds("Sounds.Practice", out _sbTrial);
             LoadSounds("Sounds.Test", out _sbTest);
             
             // local
@@ -132,18 +125,23 @@ namespace WS_STE
             { CriticalErrorMessage(String.Format("Error loading lang file:\n{1}\nSee [Local] 'lang' in {0}\n{2}", Program._settings.SourceFile, file, e.Message)); }
             
             // trigs
-            _trigTrial = new Triggerer(int.MaxValue, int.MaxValue, Program._settings.GetValue("Trial", "doTheTrial") == "true" ? Get("Trial", "cycles", 0) : 0, 0);
-            _trigTest = new Triggerer(Get("Experiment", "sessionCycles", int.MaxValue), Get("Experiment", "sessionMinutes", int.MaxValue / 60) * 60, Get("Experiment", "maxSoundsToPlay", int.MaxValue), Get("Experiment", "breakDuration", -1));
+            Dictionary<Yagmur6EventsMan.Yagmur6Event, Yagmur6EventsMan.Event> trs = new Dictionary<Yagmur6EventsMan.Yagmur6Event, Yagmur6EventsMan.Event>();
             try
             {
-                foreach (var el in Program._settings.GetValues("Triggers"))
-                    _trigTrial.TriggersAdd(new TriggerInfo(el));
+                foreach (string el in Program._settings.GetValues("Triggers")) {
+                    string[] ab = el.Split(',');
+                    string name = ab[0].Trim();
+                    int dur = Int32.Parse(ab[1].Trim());
+                    trs.Add((Yagmur6EventsMan.Yagmur6Event)Enum.Parse(typeof(Yagmur6EventsMan.Yagmur6Event), name), new Yagmur6EventsMan.Event(name, dur));
+                }
             }
             catch (Exception e)
             { CriticalErrorMessage(String.Format("Error reading triggers info:\n{0}\nSee [Triggers] in {1}", e.Message, Program._settings.SourceFile));}
-            _trigTest.TriggersAddRange(_trigTrial.Triggers);
-            _trigTrial.Trigger += new TriggerEventHandler(_AtrigTrial_Trigger);
-            _trigTest.Trigger += new TriggerEventHandler(_AtrigTest_Trigger);
+            _evt = new Yagmur6EventsMan(Get("Experiment", "practiceBlockTotal", _sbTrial.Count),
+                Get("Experiment", "firstBlockTotal", _sbTrial.Count),
+                Get("Experiment", "secondBlockTotal", _sbTrial.Count),
+                trs);
+            _evt.Trigs += _evt_Trigs;
 
             // data
             try
@@ -152,7 +150,9 @@ namespace WS_STE
             }
             catch (Exception e)
             { CriticalErrorMessage(String.Format("Error managing the data folder:\n{0}\nSee [Data] 'folder' in {1}", e.Message, Program._settings.SourceFile)); }
-            _recordTrial = Program._settings.GetValue("Trial", "record") == "true";
+            _practiceRecord = Program._settings.GetValue("EEG", "practiceRecord") == "true";
+            _firstRecord = Program._settings.GetValue("EEG", "firstRecord") == "true";
+            _secondRecord = Program._settings.GetValue("EEG", "secondRecord") == "true";
 
             // gui
             if (Program._settings.GetValue("GUI", "colors") == "dark")
@@ -217,7 +217,7 @@ namespace WS_STE
             try
             {
                 _fixDot = Image.FromFile(Program._settings.GetValue("Img", Program._settings.GetValue("FixBlock", "image", "fixImg")));
-                _waitDot = Image.FromFile(Program._settings.GetValue("Img", Program._settings.GetValue("NoticeBlock", "image", "waitImg")));
+                _waitImg = Image.FromFile(Program._settings.GetValue("Img", Program._settings.GetValue("NoticeBlock", "image", "waitImg")));
                 _restImg = Image.FromFile(Program._settings.GetValue("Img", Program._settings.GetValue("RestingBlock", "image", "restImg")));
                 panelSound.BackgroundImage = Image.FromFile(Program._settings.GetValue("Img", Program._settings.GetValue("SoundsBlock", "image", "sndImg")));
 
@@ -253,7 +253,10 @@ namespace WS_STE
         private void LoadSounds(string iniSection, out SoundBox sbl, bool separated = true)
         {
             sbl = new SoundBox(); // WAS shuffling settings from ini and separated as args
-            foreach (string categoryDir in Program._settings.GetValues(iniSection))
+            List<String> l = Program._settings.GetValues(iniSection);
+            if (l == null)
+                CriticalErrorMessage(iniSection + " not found in the ini file.");
+            foreach (string categoryDir in l)
             {
                 try
                 {
@@ -310,7 +313,7 @@ namespace WS_STE
                 textBoxSurname.Text.Replace("\\", "\\\\").Replace(";", "\\,").Replace("\n", "\\n"),
                 maskedTextBoxBirthDate.Text,
                 radioButtonMale.Checked ? "Male" : radioButtonFemale.Checked ? "Feamle" : "N",
-                _trigTrial.CicliTotali,
+                "---",
                 textBoxPlace.Text.Replace("\\", "\\\\").Replace(";", "\\,").Replace("\n", "\\n"),
                 textBoxNotes.Text.Replace("\\", "\\\\").Replace(";", "\\,").Replace("\n", "\\n"),
                 separator));
@@ -347,190 +350,66 @@ namespace WS_STE
         }
         public static void CriticalErrorMessage(string error, string cap = "SST " + Program.short_version + " Error")
         {
+#if DEBUG
+            throw new Exception(error);
+#else
             if (System.Windows.Forms.DialogResult.Yes == MessageBox.Show(error + "\n\nStop the program?", cap, MessageBoxButtons.YesNo, MessageBoxIcon.Error))
                 System.Diagnostics.Process.GetCurrentProcess().Kill();
+#endif
         }
 
         // core
-        private void SetNewExperiment()
+        private void SetupNewExperiment()
         {
-            _state = ExperimentState.Setup;
             _eegEnabled = false;
             ActivePanel = panelData;
-            _repeatedExperimentTimes = 0;
-            _ciclo = 0;
-            _sbTest.Shuffle();
             _sbTrial.Shuffle();
+            _sbTest.Shuffle();
         }
-        private void NextState(int time = 0)
+        private string Trigger(EventsMan sender, object trigger, int d1, int d2)
         {
-            if (time > 0 && !timerSpacebar.Enabled)
+            if (! trigger.GetType().Equals(typeof(Yagmur6EventsMan.Yagmur6Event)))
+                throw new NotImplementedException("Method implemented only for " + typeof(Yagmur6EventsMan.Yagmur6Event).FullName);
+
+            switch ((Yagmur6EventsMan.Yagmur6Event)trigger)
             {
-                timerSpacebar.Interval = time;
-                timerSpacebar.Enabled = true;
-            }
-            else switch (_state)
-            {
-                case ExperimentState.Start:
-                    if (_trigTrial.CicliTotali > 0)
-                    {
-                        _state = ExperimentState.PreTrial;
-                        ShowNotice(_messages[/*PRE-TRIAL*/1]);
-                    }
-                    else
-                    {
-                        _state = ExperimentState.PreTest;
-                        NextState();
-                    }
+                case Yagmur6EventsMan.Yagmur6Event.Message:
+                    ShowNotice(_messages[d1]);
                     break;
-                case ExperimentState.PreTrial:
-                    _state = ExperimentState.Trial;
-                    _trigTrial.Start();
-                    _ciclo = 0;
+                case Yagmur6EventsMan.Yagmur6Event.Fix:
+                    _blocksFile.AddTimestamp();
+                    ShowFix();
                     break;
-                case ExperimentState.Trial:
-                    if (_trigTrial.Finish)
-                    {
-                        _state = ExperimentState.PreTest;
-                        ShowNotice(_messages[/*PRE-TEST*/3]);
-                    }
-                    else
-                        _trigTrial.Resume();
-                    break;
-                case ExperimentState.PreTest:
-                    _state = ExperimentState.PreTestRest;
-                    _ciclo = 0;
-                    break;
-                case ExperimentState.PreTestRest:
-                    _state = ExperimentState.Test;
-                    _eegEnabled = true;
-                    _trigTest.Start();
-                    break;
-                case ExperimentState.Break:
-                    _state = ExperimentState.Test;
-                    _trigTest.Resume();
-                    break;
-                case ExperimentState.Test:
-                    if (_trigTest.Finish)
-                    {
-                        _repeatedExperimentTimes++;
-                        _state = ExperimentState.Idle;
-                        _eegEnabled = false;
-                        ShowNotice(_messages[/*END*/6]);
-                    }
-                    else
-                        _trigTest.Resume();
-                    break;
-                case ExperimentState.Idle:
-                    // WAS Restart Point
-                    Application.Exit();
-                    break;
-                default:
-                    break;
-            }
-        }
-        private string Trigger(Triggerer sender, SoundBox snd, TriggerInfo trigger, int iciclo)
-        {
-            switch (trigger.InternalName)
-            {
-                case "GeneralBreak":
-                    _state = ExperimentState.Break;
-                    ShowNotice(_messages[/*BRK*/5], Get("Experiment", "breakDuration", -1));
-                    break;
-                case "GeneralFinish":
-                    NextState();
-                    break;
-                case "inizio":
-                    _ciclo++;
-                    if (_state == ExperimentState.Test || _recordTrial)
-                    {
-                        _blocksFile.AddValue((_state == ExperimentState.Trial ? -1 : 1) * _ciclo);
-                        _blocksFile.AddTimestamp();
-                    }
-                    snd.LoadNext();
-                    if (trigger.Duration > 0)
-                        ShowNotice(_messages[/*BLK*/2]);
-                    break;
-                case "recordedFix":
-                    if (_state == ExperimentState.Test || _recordTrial)
-                        _blocksFile.AddTimestamp();
-                    if (trigger.Duration > 0)
-                        ShowFix();
-                    break;
-                case "fix":
-                    if (trigger.Duration > 0)
-                        ShowFix();
-                    break;
-                case "sound":
+                case Yagmur6EventsMan.Yagmur6Event.Sound:
                     ActivePanel = panelSound;
-                    if (_state == ExperimentState.Test || _recordTrial)
+                    if ((d1 == Yagmur6EventsMan.FirstBlockSound && _firstRecord) ||
+                        (d1 == Yagmur6EventsMan.SecondBlockSound && _secondRecord) ||
+                        (d1 == Yagmur6EventsMan.PracticeSound && _practiceRecord))
                     {
+                        // TODO play sound d1
+                        /*
                         int f = Math.Max(snd.LastLoaded.LastIndexOf('/'), snd.LastLoaded.LastIndexOf('\\'));
                         _soundsFile.AddValue((_state == ExperimentState.Trial ? -1 : 1) * _ciclo);
                         _soundsFile.AddValue(snd.LastLoaded.Remove(f).Replace('\\', '/'));
                         _soundsFile.AddValue(snd.LastLoaded.Substring(f + 1));
                         _soundsFile.AddTimestamp();
+                        */
                     }
-                    snd.Play();
+                    //snd.Play();
                     break;
-                case "fixAndLoopSound":
-                    bool? s = snd.LoadNext();
-                    if (s == null)
-                        sender.AskStop();
-                    else
-                        if ((bool)s)
-                            sender.AskRepeat(2);
-                    if (_state == ExperimentState.Test || _recordTrial)
-                        _soundsFile.AddTimestamp();
-                    if (trigger.Duration > 0)
-                        ShowFix();
+                case Yagmur6EventsMan.Yagmur6Event.Rest:
+                    _blocksFile.AddTimestamp();
+                    ShowNotice(_messages[/*BLK-REST*/4]);
                     break;
-                case "initRatings":
-                    if (_state == ExperimentState.Test || _recordTrial)
-                    {
-                        if (_ratingsFile.NextChannel != 0)
-                            _ratingsFile.Endline();
-                        _ratingsFile.AddValue((_state == ExperimentState.Trial ? -1 : 1) * _ciclo);
-                    }
-                    _lastRatInit = DateTime.Now;
-                    ActivePanel = panelRating;
+                case Yagmur6EventsMan.Yagmur6Event.Break:
+                    ShowNotice(_messages[/*BRK*/5]);
                     break;
-                case "rating":
-                    if (NextRating())
-                    {
-                        sender.AskRepeat(1);
-                        // se non ha risp
-                        if (_state == ExperimentState.Test || _recordTrial)
-                        {
-                            _ratingsFile.TypeCheck = false;
-                            while (_ratingsFile.NextChannel < _ratingCsvTypes.Count * _currentRating - 2)
-                                _ratingsFile.AddValue(null);
-                            _ratingsFile.TypeCheck = true;
-                            // show
-                            _ratingsFile.AddTimestamp();
-                        }
-                    }
-                    else
-                    {
-                        NextState();
-                    }
+                case Yagmur6EventsMan.Yagmur6Event.Rating:
                     break;
-                case "endRatings":
-                    if (!((_state == ExperimentState.Trial && Program._settings.GetValue("RestingBlock", "useInTrial") == "true") || _state == ExperimentState.Test))
-                    {
-                        sender.AskRepeat(-1);
-                        _blocksFile.Endline();
-                    }
-                    ActivePanel = panelFix;
-                    sender.AskWait(_lastRatInit.AddMilliseconds(Get("RatingBlock", "minRatingsDuration", 0)));
+                case Yagmur6EventsMan.Yagmur6Event.End:
+                    // TODO manage the loop
                     break;
-                case "rest":
-                    if (_state == ExperimentState.Test || _recordTrial)
-                        _blocksFile.AddTimestamp();
-                    if ((_state == ExperimentState.Trial && Program._settings.GetValue("RestingBlock", "useInTrial") == "true") || _state == ExperimentState.Test)
-                    {
-                        ShowNotice(_messages[/*BLK-REST*/4]);
-                    }
+                default:
                     break;
             }
             return default(string);
@@ -557,6 +436,8 @@ namespace WS_STE
                     a.Enabled = true;
                     a.Visible = a.Tag != null;
                 }
+                timerRating.Interval = _ratings[_currentRating].Duration;
+                timerRating.Enabled = true;
                 _currentRating++;
                 return true;
             }
@@ -568,7 +449,7 @@ namespace WS_STE
         }
         private void ShowWaiting()
         {
-            panelFix.BackgroundImage = _waitDot;
+            panelFix.BackgroundImage = _waitImg;
             ActivePanel = panelFix;
         }
         private void ShowResting()
@@ -576,26 +457,29 @@ namespace WS_STE
             panelFix.BackgroundImage = _restImg;
             ActivePanel = panelFix;
         }
-        private void ShowFix(int time = -1)
+        private void ShowFix()
         {
             panelFix.BackgroundImage = _fixDot;
             ActivePanel = panelFix;
-            if (time >= 0)
-                NextState(time);
         }
-        private void ShowNotice(string p, int time = -1)
+        private void ShowNotice(string p)
         {
             labelNotice.Text = p;
             ActivePanel = panelNotice;
-            if (time >= 0)
-                NextState(time);
         }
 
         // interth evt wrapper
-        string _AtrigTrial_Trigger(Triggerer sender, TriggerInfo meta, int ciclo, int sessione) { return (string)Invoke(new TriggerEventHandler(_trigTrial_Trigger), sender, meta, ciclo, sessione); }
-        string _AtrigTest_Trigger(Triggerer sender, TriggerInfo meta, int ciclo, int sessione) { return (string)Invoke(new TriggerEventHandler(_trigTest_Trigger), sender, meta, ciclo, sessione); }
-        string _trigTrial_Trigger(Triggerer sender, TriggerInfo meta, int ciclo, int sessione) { return Trigger(sender, _sbTrial, meta, ciclo); }
-        string _trigTest_Trigger(Triggerer sender, TriggerInfo meta, int ciclo, int sessione) { return Trigger(sender, _sbTest, meta, ciclo); }
+        string _evt_Trigs(EventsMan sender, object trigger, int v1 = -1, int v2 = -1) {
+            try
+            {
+                return (string)Invoke(new EventsMan.TriggerEventHandler(_trigTest_Trigger), new object[] {sender, trigger, v1, v2});
+            }
+            catch (InvalidOperationException)
+            {
+                return "error";
+            }
+        }
+        string _trigTest_Trigger(EventsMan sender, object trigger, int d1, int d2) { return Trigger(sender, trigger, d1, d2); }
         void AEpoc_SensorsDataAvailable(DateTime ts, EPOC_Data data) { Invoke(new EpocCallback(Epoc_SensorsDataAvailable), ts, data); }
         void AEpoc_QualityDataAvailable(DateTime ts, EPOC_Data data) { Invoke(new EpocCallback(Epoc_QualityDataAvailable), ts, data); }
         void AEpoc_ConnectedChanged(DateTime ts, bool connected) { Invoke(new EpocConnectionCallback(Epoc_ConnectedChanged), ts, connected); }
@@ -710,6 +594,12 @@ namespace WS_STE
                     panelBatCharge.Height = _batFul.Height * 100 / (Epoc.BatteryCharge + 1);
                 if (!Epoc.Created)
                     Epoc.Create();
+
+                // evt link
+                Epoc.ConnectedChanged += new EpocConnectionCallback(AEpoc_ConnectedChanged);
+                Epoc.SensorsDataAvailable += new EpocCallback(AEpoc_SensorsDataAvailable);
+                Epoc.QualityDataAvailable += new EpocCallback(AEpoc_QualityDataAvailable);
+
                 Application.Idle += new EventHandler(Application_Idle);
             }
             else
@@ -725,7 +615,7 @@ namespace WS_STE
         }
         private void buttonNew_Click(object sender, EventArgs e)
         {
-            SetNewExperiment();
+            SetupNewExperiment();
         }
         private void buttonNext_Click(object sender, EventArgs e)
         {
@@ -739,16 +629,19 @@ namespace WS_STE
 #endif
             {
                 SaveMetaStartData();
-                _state = ExperimentState.Start;
                 if (Program._settings.GetValue("SignalBlock", "show") == "true")
                     ActivePanel = panelConnect;
                 else
-                    NextState();
+                    _evt.Start();
             }
         }
         private void buttonRating_Click(object sender, EventArgs e)
         {
-            MainForm_KeyPress(this, new KeyPressEventArgs((char)((sender as Button).Tag)));
+            int cr = _currentRating;
+            nextRatingMutex.WaitOne();
+            if (cr == _currentRating)
+                MainForm_KeyPress(this, new KeyPressEventArgs((char)((sender as Button).Tag)));
+            nextRatingMutex.Release();
         }
 
         // keys
@@ -756,45 +649,45 @@ namespace WS_STE
         {
             if (ActivePanel == panelNotice)
             {
-                if (e.KeyChar == ' ' && !timerSpacebar.Enabled)
-                    if (_state == ExperimentState.Idle)
-                        NextState();
+                if (e.KeyChar == ' ' && !timerRating.Enabled)
+                    if (_evt.CurrentEvent.Equals(Yagmur6EventsMan.Yagmur6Event.End))
+                        _evt.Resume(Yagmur6EventsMan.Yagmur6Event.End);
                     else
                     {
-                        int a = Get("NoticeBlock", "defaultTime", 1000);
-                        NextState(a);
-                        if (a > 0)
-                            ShowWaiting();
+                        // WAS Wanna show wait? try waiting here
+                        // ShowWaiting();
+                        _evt.Resume(Yagmur6EventsMan.Yagmur6Event.Message);
                     }
             }
             else if (ActivePanel == panelRating)
             {
                 if (_currentRating > 0 &&_currentRating <= _ratings.Count && e.KeyChar >= _ratings[_currentRating - 1].Min && e.KeyChar <= _ratings[_currentRating - 1].Max)
                 {
+                    timerRating.Enabled = false;
                     _ratingsFile.AddTimestamp();
                     _ratingsFile.AddValue(e.KeyChar);
-                    NextState();
+                    NextRating();
                 }
             }
             else if (ActivePanel == panelConnect && e.KeyChar == ' ')
             {
-                NextState();
+                _evt.Start();
             }
         }
 
         // timing
         private void timerSpacebar_Tick(object sender, EventArgs e)
         {
-            timerSpacebar.Enabled = false;
-            if (_state == ExperimentState.PreTest
-                || _state == ExperimentState.PreTestRest
-                || _state == ExperimentState.PreTrial
-                || _state == ExperimentState.Break
-                || _state == ExperimentState.Trial
-                || _state == ExperimentState.Test)
-            {
-                NextState();
-            }
+            int cr = _currentRating;
+            nextRatingMutex.WaitOne();
+            if (cr == _currentRating)
+                NextRating();
+            nextRatingMutex.Release();
+        }
+
+        public void Dispose()
+        {
+            _evt.Close();
         }
     }
 }
