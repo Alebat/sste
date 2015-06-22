@@ -1,3 +1,2 @@
-bin/Release
-bin/Debug/Data
-obj
+/bin
+/obj
