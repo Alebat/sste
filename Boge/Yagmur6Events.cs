@@ -50,10 +50,10 @@ namespace WS_STE
             Second(true);
             Instructions(2);
             First();
-            Break();
+            Break(5);
             Instructions(3);
             Second();
-            Instructions(6);
+            Break(6);
             End();
         }
 
@@ -69,9 +69,9 @@ namespace WS_STE
             Do(Yagmur6Event.Message, p);
         }
 
-        private void Break()
+        private void Break(int d)
         {
-            Do(Yagmur6Event.Break);
+            Do(Yagmur6Event.Break, d);
         }
 
         private void First()

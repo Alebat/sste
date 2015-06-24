@@ -303,12 +303,9 @@ namespace WS_STE
             _blocksFile = new TimeDataFile(_user.FullName + "\\" + Program._settings.GetValue("Data", "blocks.f"), new List<Type> { typeof(double), typeof(string), typeof(int) }, head.Replace(',', separator), separator);
             head = Program._settings.GetValue("Data", "copyNames", "false") != "false" ? Program._settings.GetValue("Data", "sounds.n") + "\n" : "";
             _soundsFile = new TimeDataFile(_user.FullName + "\\" + Program._settings.GetValue("Data", "sounds.f"), new List<Type> { typeof(double), typeof(string) }, head.Replace(',',separator), separator);
-            List<Type> tt = new List<Type> { typeof(int) };
             head = Program._settings.GetValue("Data", "copyNames", "false") != "false" ? Program._settings.GetValue("Data", "ratings.n") + "\n" : "";
             _ratingCsvTypes = new List<Type> { typeof(double), typeof(double), typeof(char) };
-            for (int i = 0; i < _ratings.Count; i++)
-                tt.AddRange(_ratingCsvTypes);
-            _ratingsFile = new TimeDataFile(_user.FullName + "\\" + Program._settings.GetValue("Data", "ratings.f"), tt, head.Replace(',', separator), separator);
+            _ratingsFile = new TimeDataFile(_user.FullName + "\\" + Program._settings.GetValue("Data", "ratings.f"), new List<Type> { typeof(double), typeof(char) }, head.Replace(',', separator), separator);
         }
         private bool CheckTextBox(TextBoxBase textBox, Predicate<string> l = null)
         {
@@ -401,7 +398,7 @@ namespace WS_STE
                     ShowNotice(_messages[/*BLK-REST*/4]);
                     break;
                 case Yagmur6EventsMan.Yagmur6Event.Break:
-                    ShowNotice(_messages[/*BRK*/5]);
+                    ShowNotice(_messages[d1]);
                     break;
                 case Yagmur6EventsMan.Yagmur6Event.Rating:
                     ActivePanel = panelRating;
@@ -439,6 +436,9 @@ namespace WS_STE
                 }
                 timerRating.Interval = _ratings[_currentRating].Duration;
                 timerRating.Enabled = true;
+                _blocksFile.AddTimestamp();
+                _blocksFile.AddValue("NextScale");
+                _blocksFile.AddValue(_currentRating);
                 _currentRating++;
                 return true;
             }

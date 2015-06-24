@@ -71,7 +71,7 @@ namespace WS_STE
 
         public string LastLoaded
         {
-            get { return _loaded ? _next.SoundLocation : null; }
+            get { return _next != null ? _next.SoundLocation : null; }
         }
 
         public void Shuffle()

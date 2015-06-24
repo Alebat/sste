@@ -23,7 +23,7 @@ namespace WS_STE
             TotalChannels = channels;
             Separator = separator;
             TypeCheck = false;
-            _file.WriteLine(header);
+            _file.Write(header);
             EmptyObject = "None";
         }
 
@@ -33,8 +33,8 @@ namespace WS_STE
             TotalChannels = chans.Count;
             Separator = separator;
             Channels = new List<Type>(chans);
-            TypeCheck = !true;
-            _file.WriteLine(header);
+            TypeCheck = true;
+            _file.Write(header);
             EmptyObject = "None";
         }
 
