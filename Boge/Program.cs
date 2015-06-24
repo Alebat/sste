@@ -33,10 +33,7 @@ namespace WS_STE
             if (!exec)
             {
                 Application.EnableVisualStyles();
-                using (MainForm f = new MainForm())
-                {
-                    Application.Run(new MainForm());
-                }
+                Application.Run(new MainForm());
             }
         }
 

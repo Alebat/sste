@@ -7,9 +7,6 @@ using System.Text;
 
 namespace WS_STE
 {
-    /// <summary>
-    /// Gestisce i suoni, la loro esecuzione e l'ordinamento.
-    /// </summary>
     class SoundBox
     {
         Random _rnd = new Random();
@@ -21,9 +18,6 @@ namespace WS_STE
 
         public int Count { get; set; }
 
-        /// <summary>
-        /// Ctor master
-        /// </summary>
         public SoundBox()
         {
             //                  folder -> file
@@ -36,9 +30,6 @@ namespace WS_STE
             _folders = new List<KeyValuePair<string, List<string>>>();
         }
 
-        /// <summary>
-        /// Aggiunge i suoni da un elenco.
-        /// </summary>
         /// <param name="folders">Percorsi da aggiungere.</param>
         public void AddFolder(List<string> folders, string fol = ".")
         {
@@ -49,9 +40,6 @@ namespace WS_STE
                 _folders.Find(a => a.Key == fol).Value.AddRange(folders);
         }
 
-        /// <summary>
-        /// Ripristina i suoni
-        /// </summary>
         public void Shuffle()
         {
             Comparison<KeyValuePair<string, List<string>>> c;

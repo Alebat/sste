@@ -11,7 +11,7 @@ using System.Threading;
 
 namespace WS_STE
 {
-    public partial class MainForm : Form, IDisposable
+    public partial class MainForm : Form
     {
         // info const
         const int _expectedTexts = 6;
@@ -20,8 +20,9 @@ namespace WS_STE
         Random rnd = new Random();
         // inst
         EventsMan _evt;
-        SoundBox _sbTrial;
-        SoundBox _sbTest;
+        ISoundsPlaylist _sbPractice;
+        ISoundsPlaylist _sbFirst;
+        ISoundsPlaylist _sbSecond;
         TimeDataFile _blocksFile;
         TimeDataFile _soundsFile;
         TimeDataFile _ratingsFile;
@@ -34,9 +35,9 @@ namespace WS_STE
         Image _batFul;
         Image _batEmp;
         Image _batRed;
-        Image _fixDot;
+        Image _fixCross;
+        Image _restCross;
         Image _waitImg;
-        Image _restImg;
         List<List<Button>> _ratingsButtons;
         Semaphore nextRatingMutex = new Semaphore(1, 1);
         // info
@@ -89,6 +90,7 @@ namespace WS_STE
         {
             InitializeComponent();
             SuspendLayout();
+            FormClosed += MainForm_FormClosed;
             InitializingINIErrorSensitivePart();
             // lay
             panelNotice.Dock = DockStyle.Fill;
@@ -102,8 +104,9 @@ namespace WS_STE
         private void InitializingINIErrorSensitivePart()
         {
             // snds
-            LoadSounds("Sounds.Practice", out _sbTrial);
-            LoadSounds("Sounds.Test", out _sbTest);
+            LoadSounds("Sounds.Practice", out _sbPractice, Get("Experiment", "sounds.practice.forEachDir", -1));
+            LoadSounds("Sounds.First", out _sbFirst, Get("Experiment", "sounds.first.forEachDir", -1));
+            LoadSounds("Sounds.Second", out _sbSecond, Get("Experiment", "sounds.second.forEachDir", -1));
             
             // local
             _messages = new List<string>();
@@ -112,9 +115,7 @@ namespace WS_STE
             {
                 if (file != null)
                 {
-                    // TODO 8 no need foreach
-                    foreach (string item in File.ReadAllText(file).Split('#'))
-                        _messages.Add(item);
+                    _messages.AddRange(File.ReadAllText(file).Split('#'));
                     if (_messages.Count < _expectedTexts)
                         CriticalErrorMessage("Lang file error: some messages missing.\nCheck: must be " + _expectedTexts + " messages separated by a '#' in " + file);
                 }
@@ -137,9 +138,10 @@ namespace WS_STE
             }
             catch (Exception e)
             { CriticalErrorMessage(String.Format("Error reading triggers info:\n{0}\nSee [Triggers] in {1}", e.Message, Program._settings.SourceFile));}
-            _evt = new Yagmur6EventsMan(Get("Experiment", "practiceBlockTotal", _sbTrial.Count),
-                Get("Experiment", "firstBlockTotal", _sbTrial.Count),
-                Get("Experiment", "secondBlockTotal", _sbTrial.Count),
+            _evt = new Yagmur6EventsMan(
+                _sbPractice.Count,
+                _sbFirst.Count,
+                _sbSecond.Count,
                 trs);
             _evt.Trigs += _evt_Trigs;
 
@@ -150,9 +152,9 @@ namespace WS_STE
             }
             catch (Exception e)
             { CriticalErrorMessage(String.Format("Error managing the data folder:\n{0}\nSee [Data] 'folder' in {1}", e.Message, Program._settings.SourceFile)); }
-            _practiceRecord = Program._settings.GetValue("EEG", "practiceRecord") == "true";
-            _firstRecord = Program._settings.GetValue("EEG", "firstRecord") == "true";
-            _secondRecord = Program._settings.GetValue("EEG", "secondRecord") == "true";
+            _practiceRecord = Program._settings.GetValue("Data", "save.practice") == "true";
+            _firstRecord = Program._settings.GetValue("Data", "save.first") == "true";
+            _secondRecord = Program._settings.GetValue("Data", "save.second") == "true";
 
             // gui
             if (Program._settings.GetValue("GUI", "colors") == "dark")
@@ -216,10 +218,14 @@ namespace WS_STE
 
             try
             {
-                _fixDot = Image.FromFile(Program._settings.GetValue("Img", Program._settings.GetValue("FixBlock", "image", "fixImg")));
-                _waitImg = Image.FromFile(Program._settings.GetValue("Img", Program._settings.GetValue("NoticeBlock", "image", "waitImg")));
-                _restImg = Image.FromFile(Program._settings.GetValue("Img", Program._settings.GetValue("RestingBlock", "image", "restImg")));
-                panelSound.BackgroundImage = Image.FromFile(Program._settings.GetValue("Img", Program._settings.GetValue("SoundsBlock", "image", "sndImg")));
+                _fixCross = 
+                    Image.FromFile(Program._settings.GetValue("Img", Program._settings.GetValue("FixBlock", "image", "fixImg")));
+                _waitImg = 
+                    Image.FromFile(Program._settings.GetValue("Img", Program._settings.GetValue("RatingBlock", "image", "waitImg")));
+                _restCross = 
+                    Image.FromFile(Program._settings.GetValue("Img", Program._settings.GetValue("RestingBlock", "image", "restImg")));
+                panelSound.BackgroundImage = 
+                    Image.FromFile(Program._settings.GetValue("Img", Program._settings.GetValue("SoundsBlock", "image", "sndImg")));
 
                 string[] col = Program._settings.GetValue("GUI", "imgBg").Split(',');
                 panelRating.BackColor =
@@ -250,9 +256,9 @@ namespace WS_STE
                 a = b;
             return a;
         }
-        private void LoadSounds(string iniSection, out SoundBox sbl, bool separated = true)
+        private void LoadSounds(string iniSection, out ISoundsPlaylist sbl, int rndFit = -1)
         {
-            sbl = new SoundBox(); // WAS shuffling settings from ini and separated as args
+            sbl = new Yagmur6SoundBox();
             List<String> l = Program._settings.GetValues(iniSection);
             if (l == null)
                 CriticalErrorMessage(iniSection + " not found in the ini file.");
@@ -260,36 +266,7 @@ namespace WS_STE
             {
                 try
                 {
-                    if (Directory.Exists(categoryDir))
-                    {
-                        List<string> dcontents = new List<string>(Directory.EnumerateDirectories(categoryDir));
-                        List<string> fcontents = new List<string>(Directory.EnumerateFiles(categoryDir));
-                        // WAS separated
-                        if (dcontents.Count > 0)
-                            foreach (string soundsDir in dcontents)
-                            {
-                                try
-                                {
-                                    List<string> contents2 = new List<string>(Directory.EnumerateFiles(soundsDir));
-                                    //            sounds,    subcatdir name
-                                    sbl.AddFolder(contents2, categoryDir + '>' + soundsDir);
-                                }
-                                catch (Exception e)
-                                {
-                                    CriticalErrorMessage(String.Format("Error loading sounds directory:\n{0}\n{1}\n\nSee [{3}] '{2}'", categoryDir, e.Message, Program._settings.SourceFile, iniSection));
-                                }
-                            }
-                        else
-                            try
-                            {
-                                //            sounds,    subcatdir name
-                                sbl.AddFolder(fcontents, "?" + '>' + categoryDir);
-                            }
-                            catch (Exception e)
-                            {
-                                CriticalErrorMessage(String.Format("Error loading sounds directory:\n{0}\n{1}\n\nSee [{3}] '{2}'", categoryDir, e.Message, Program._settings.SourceFile, iniSection));
-                            }
-                    }
+                    ((Yagmur6SoundBox)sbl).AddDirectory(categoryDir, rndFit);
                 }
                 catch (Exception e)
                 {
@@ -300,14 +277,14 @@ namespace WS_STE
         private void SaveMetaStartData()
         {
             // meta save
-            string dir = String.Format("{0,4}{1}{2}_{3}-{4}", DateTime.Now.Year, DateTime.Now.Month.ToString().PadLeft(2, '0'), DateTime.Now.Day.ToString().PadLeft(2, '0'), textBoxSurname.Text, textBoxName.Text);
-            _user = new DirectoryInfo(_saveIn.FullName + "/" + dir);
+            string dir = String.Format("{0,4}{1}{2}_{5:00}{6:00}{7:00}_{3}_{4}", DateTime.Now.Year, DateTime.Now.Month.ToString().PadLeft(2, '0'), DateTime.Now.Day.ToString().PadLeft(2, '0'), textBoxSurname.Text, textBoxName.Text, DateTime.Now.Hour, DateTime.Now.Minute, DateTime.Now.Second);
+            _user = new DirectoryInfo(_saveIn.FullName + @"\" + dir);
             while (_user.Exists)
-                _user = new DirectoryInfo(_saveIn.FullName + "/" + dir + String.Format("_{0}{1}{2}", DateTime.Now.Hour, DateTime.Now.Minute, DateTime.Now.Second));
+                _user = new DirectoryInfo(_saveIn.FullName + @"\" + dir + String.Format("b"));
             _user.Create();
             // tsSessionCreation, name, surname, date_of_birth, gender, trialCycles, place, notes
             char separator = (char)Get("Data","ordCharSeparator", 45);
-            File.WriteAllText(_user.FullName + "/" + Program._settings.GetValue("Data", "meta\\f"), String.Format("{0}{8}{1}{8}{2}{8}{3}{8}{4}{8}{5}{8}{6}{8}{7}",
+            File.WriteAllText(_user.FullName + "/" + Program._settings.GetValue("Data", "meta.f"), String.Format("{0}{8}{1}{8}{2}{8}{3}{8}{4}{8}{5}{8}{6}{8}{7}",
                 DateTime.UtcNow.ToUnixTimestamp(),
                 textBoxName.Text.Replace("\\", "\\\\").Replace(";", "\\,").Replace("\n", "\\n"),
                 textBoxSurname.Text.Replace("\\", "\\\\").Replace(";", "\\,").Replace("\n", "\\n"),
@@ -320,18 +297,18 @@ namespace WS_STE
 
             // data files
             string head;
-            head = Program._settings.GetValue("Data", "copyNames", "false") != "false" ? Program._settings.GetValue("Data", "eeg\\n") + "\n" : "";
-            _eegFile = new TimeDataFile(_user.FullName + "\\" + Program._settings.GetValue("Data", "eeg\\f"), typeof(EPOC_Data).GetFields().Length, head.Replace(',',separator), separator);
-            head = Program._settings.GetValue("Data", "copyNames", "false") != "false" ? Program._settings.GetValue("Data", "blocks\\n") + "\n" : "";
-            _blocksFile = new TimeDataFile(_user.FullName + "\\" + Program._settings.GetValue("Data", "blocks\\f"), new List<Type> { typeof(int), typeof(double), typeof(double), typeof(double), typeof(double) }, head.Replace(',', separator), separator);
-            head = Program._settings.GetValue("Data", "copyNames", "false") != "false" ? Program._settings.GetValue("Data", "sounds\\n") + "\n" : "";
-            _soundsFile = new TimeDataFile(_user.FullName + "\\" + Program._settings.GetValue("Data", "sounds\\f"), new List<Type> { typeof(int), typeof(string), typeof(string), typeof(double), typeof(double) }, head.Replace(',',separator), separator);
+            head = Program._settings.GetValue("Data", "copyNames", "false") != "false" ? Program._settings.GetValue("Data", "eeg.n") + "\n" : "";
+            _eegFile = new TimeDataFile(_user.FullName + "\\" + Program._settings.GetValue("Data", "eeg.f"), typeof(EPOC_Data).GetFields().Length, head.Replace(',',separator), separator);
+            head = Program._settings.GetValue("Data", "copyNames", "false") != "false" ? Program._settings.GetValue("Data", "blocks.n") + "\n" : "";
+            _blocksFile = new TimeDataFile(_user.FullName + "\\" + Program._settings.GetValue("Data", "blocks.f"), new List<Type> { typeof(double), typeof(string), typeof(int) }, head.Replace(',', separator), separator);
+            head = Program._settings.GetValue("Data", "copyNames", "false") != "false" ? Program._settings.GetValue("Data", "sounds.n") + "\n" : "";
+            _soundsFile = new TimeDataFile(_user.FullName + "\\" + Program._settings.GetValue("Data", "sounds.f"), new List<Type> { typeof(double), typeof(string) }, head.Replace(',',separator), separator);
             List<Type> tt = new List<Type> { typeof(int) };
-            head = Program._settings.GetValue("Data", "copyNames", "false") != "false" ? Program._settings.GetValue("Data", "ratings\\n") + "\n" : "";
+            head = Program._settings.GetValue("Data", "copyNames", "false") != "false" ? Program._settings.GetValue("Data", "ratings.n") + "\n" : "";
             _ratingCsvTypes = new List<Type> { typeof(double), typeof(double), typeof(char) };
             for (int i = 0; i < _ratings.Count; i++)
                 tt.AddRange(_ratingCsvTypes);
-            _ratingsFile = new TimeDataFile(_user.FullName + "\\" + Program._settings.GetValue("Data", "ratings\\f"), tt, head.Replace(',', separator), separator);
+            _ratingsFile = new TimeDataFile(_user.FullName + "\\" + Program._settings.GetValue("Data", "ratings.f"), tt, head.Replace(',', separator), separator);
         }
         private bool CheckTextBox(TextBoxBase textBox, Predicate<string> l = null)
         {
@@ -361,15 +338,24 @@ namespace WS_STE
         // core
         private void SetupNewExperiment()
         {
-            _eegEnabled = false;
             ActivePanel = panelData;
-            _sbTrial.Shuffle();
-            _sbTest.Shuffle();
+            _sbFirst.Shuffle();
+            _sbSecond.Shuffle();
+            _sbPractice.Shuffle();
+            _sbFirst.LoadNext();
+            _sbSecond.LoadNext();
+            _sbPractice.LoadNext();
         }
         private string Trigger(EventsMan sender, object trigger, int d1, int d2)
         {
             if (! trigger.GetType().Equals(typeof(Yagmur6EventsMan.Yagmur6Event)))
                 throw new NotImplementedException("Method implemented only for " + typeof(Yagmur6EventsMan.Yagmur6Event).FullName);
+
+            _blocksFile.AddTimestamp();
+            _blocksFile.AddValue(trigger.ToString());
+            _blocksFile.AddValue(d1);
+
+            Console.WriteLine(trigger.ToString() + (d1 >= 0 ? (":" + d1) : ""));
 
             switch ((Yagmur6EventsMan.Yagmur6Event)trigger)
             {
@@ -377,37 +363,52 @@ namespace WS_STE
                     ShowNotice(_messages[d1]);
                     break;
                 case Yagmur6EventsMan.Yagmur6Event.Fix:
-                    _blocksFile.AddTimestamp();
+                    _eegEnabled = 
+                        (_practiceRecord && d1 == Yagmur6EventsMan.PracticeSound) || 
+                        (_firstRecord && d1 == Yagmur6EventsMan.FirstBlockSound) ||
+                        (_secondRecord && d1 == Yagmur6EventsMan.SecondBlockSound);
                     ShowFix();
                     break;
                 case Yagmur6EventsMan.Yagmur6Event.Sound:
                     ActivePanel = panelSound;
+                    ISoundsPlaylist snd;
+                    switch (d1)
+                    {
+                        case Yagmur6EventsMan.PracticeSound:
+                            snd = _sbPractice;
+                            break;
+                        case Yagmur6EventsMan.FirstBlockSound:
+                            snd = _sbFirst;
+                            break;
+                        case Yagmur6EventsMan.SecondBlockSound:
+                            snd = _sbSecond;
+                            break;
+                        default:
+                            CriticalErrorMessage("Internal error: FndME-94rh24rh2\nUsing Practice sounds.");
+                            snd = _sbPractice;
+                            break;
+	                }
+                    snd.PlayNext();
                     if ((d1 == Yagmur6EventsMan.FirstBlockSound && _firstRecord) ||
                         (d1 == Yagmur6EventsMan.SecondBlockSound && _secondRecord) ||
                         (d1 == Yagmur6EventsMan.PracticeSound && _practiceRecord))
                     {
-                        // TODO play sound d1
-                        /*
-                        int f = Math.Max(snd.LastLoaded.LastIndexOf('/'), snd.LastLoaded.LastIndexOf('\\'));
-                        _soundsFile.AddValue((_state == ExperimentState.Trial ? -1 : 1) * _ciclo);
-                        _soundsFile.AddValue(snd.LastLoaded.Remove(f).Replace('\\', '/'));
-                        _soundsFile.AddValue(snd.LastLoaded.Substring(f + 1));
                         _soundsFile.AddTimestamp();
-                        */
+                        _soundsFile.AddValue(snd.LastLoaded);
                     }
-                    //snd.Play();
                     break;
                 case Yagmur6EventsMan.Yagmur6Event.Rest:
-                    _blocksFile.AddTimestamp();
                     ShowNotice(_messages[/*BLK-REST*/4]);
                     break;
                 case Yagmur6EventsMan.Yagmur6Event.Break:
                     ShowNotice(_messages[/*BRK*/5]);
                     break;
                 case Yagmur6EventsMan.Yagmur6Event.Rating:
+                    ActivePanel = panelRating;
+                    NextRating();
                     break;
                 case Yagmur6EventsMan.Yagmur6Event.End:
-                    // TODO manage the loop
+                    SetupNewExperiment();
                     break;
                 default:
                     break;
@@ -420,7 +421,7 @@ namespace WS_STE
                 if (item[0].Enabled)
                     item.ForEach(b => b.Enabled = b.Visible = false);
 
-            // ifx set el next
+            // if x set else next
             if (_currentRating < _ratings.Count)
             {
                 panelRating.BackgroundImage = _ratings[_currentRating].Image;
@@ -444,22 +445,24 @@ namespace WS_STE
             else
             {
                 _currentRating = 0;
+                if (ActivePanel == panelRating)
+                    ShowWait();
                 return false;
             }
         }
-        private void ShowWaiting()
+        private void ShowWait()
         {
             panelFix.BackgroundImage = _waitImg;
             ActivePanel = panelFix;
         }
-        private void ShowResting()
+        private void ShowRest()
         {
-            panelFix.BackgroundImage = _restImg;
+            panelFix.BackgroundImage = _restCross;
             ActivePanel = panelFix;
         }
         private void ShowFix()
         {
-            panelFix.BackgroundImage = _fixDot;
+            panelFix.BackgroundImage = _fixCross;
             ActivePanel = panelFix;
         }
         private void ShowNotice(string p)
@@ -529,6 +532,14 @@ namespace WS_STE
             if (ActivePanel == panelConnect)
                 Epoc.AskQuality();
         }
+        private void MainForm_FormClosed(object sender, FormClosedEventArgs e)
+        {
+            if (_evt != null)
+            {
+                _evt.Close();
+                _evt = null;
+            }
+        }
 
         // layout chg
         private void panelData_EnabledChanged(object sender, EventArgs e)
@@ -568,8 +579,6 @@ namespace WS_STE
             {
                 this.Focus();
                 ShowCursor = false;
-                if (Program._settings.GetValue("NoticeBlock", "waitKey") != "true")
-                    this.OnKeyPress(new KeyPressEventArgs(' '));
             }
         }
         private void panelRating_EnabledChanged(object sender, EventArgs e)
@@ -650,7 +659,9 @@ namespace WS_STE
             if (ActivePanel == panelNotice)
             {
                 if (e.KeyChar == ' ' && !timerRating.Enabled)
-                    if (_evt.CurrentEvent.Equals(Yagmur6EventsMan.Yagmur6Event.End))
+                    if (_evt.CurrentEvent.Equals(Yagmur6EventsMan.Yagmur6Event.Break))
+                        _evt.Resume(Yagmur6EventsMan.Yagmur6Event.Break);
+                    else if (_evt.CurrentEvent.Equals(Yagmur6EventsMan.Yagmur6Event.End))
                         _evt.Resume(Yagmur6EventsMan.Yagmur6Event.End);
                     else
                     {
@@ -678,16 +689,12 @@ namespace WS_STE
         // timing
         private void timerSpacebar_Tick(object sender, EventArgs e)
         {
+            timerRating.Enabled = false;
             int cr = _currentRating;
             nextRatingMutex.WaitOne();
             if (cr == _currentRating)
                 NextRating();
             nextRatingMutex.Release();
-        }
-
-        public void Dispose()
-        {
-            _evt.Close();
         }
     }
 }

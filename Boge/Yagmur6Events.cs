@@ -33,7 +33,6 @@ namespace WS_STE
         public const int SecondBlockSound = 2;
 
         int _first, _second, _practice;
-        int _breakDuration;
 
         Dictionary<Yagmur6Event, Event> _loaded;
 
@@ -47,25 +46,18 @@ namespace WS_STE
 
         protected override void Process()
         {
-            // Instructions
             Instructions(1);
-            // Practice
             Second(true);
-            // Instructions
-            Instructions(3);
-            // First
+            Instructions(2);
             First();
-            // Break
             Break();
-            //Instructions
             Instructions(3);
-            // Second
             Second();
-            // End
+            Instructions(6);
             End();
         }
 
-        private void WaitLoaded(Yagmur6Event e, int p = -1)
+        private void Do(Yagmur6Event e, int p = -1)
         {
             Trig(e, p);
             if (_loaded.ContainsKey(e))
@@ -74,21 +66,21 @@ namespace WS_STE
 
         private void Instructions(int p)
         {
-            WaitLoaded(Yagmur6Event.Message, p);
+            Do(Yagmur6Event.Message, p);
         }
 
         private void Break()
         {
-            WaitLoaded(Yagmur6Event.Break);
+            Do(Yagmur6Event.Break);
         }
 
         private void First()
         {
             for (int i = 0; i < _first; i++)
             {
-                WaitLoaded(Yagmur6Event.Fix);
-                WaitLoaded(Yagmur6Event.Sound, FirstBlockSound);
-                WaitLoaded(Yagmur6Event.Rest);
+                Do(Yagmur6Event.Fix, FirstBlockSound);
+                Do(Yagmur6Event.Sound, FirstBlockSound);
+                Do(Yagmur6Event.Rest);
             }
         }
 
@@ -96,15 +88,15 @@ namespace WS_STE
         {
             for (int i = 0; i < _second; i++)
             {
-                WaitLoaded(Yagmur6Event.Fix);
-                WaitLoaded(Yagmur6Event.Sound, practice ? PracticeSound : SecondBlockSound);
-                WaitLoaded(Yagmur6Event.Rating);
+                Do(Yagmur6Event.Fix, practice ? PracticeSound : SecondBlockSound);
+                Do(Yagmur6Event.Sound, practice ? PracticeSound : SecondBlockSound);
+                Do(Yagmur6Event.Rating);
             }
         }
 
         private new void End()
         {
-            WaitLoaded(Yagmur6Event.End);
+            Do(Yagmur6Event.End);
             base.End();
         }
     }

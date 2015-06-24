@@ -15,6 +15,7 @@ namespace WS_STE
 
         volatile bool _started = false;
         volatile bool _ended = false;
+        volatile bool _paused = false;
         Thread _process = null;
         SemaphoreSlim _sem = new SemaphoreSlim(0, 1);
 
@@ -38,9 +39,12 @@ namespace WS_STE
         protected void Sleep(int millis = -1)
         {
             if (millis < 0)
+            {
+                _paused = true;
                 _sem.Wait();
+            }
             else
-                _sem.Wait(millis);
+                Thread.Sleep(millis);
         }
 
         internal void End()
@@ -58,6 +62,8 @@ namespace WS_STE
 
         public void Start()
         {
+            if (_ended)
+                Reset();
             if (!_started)
             {
                 if (_process == null)
@@ -79,8 +85,11 @@ namespace WS_STE
 
         public void Resume(object controlCurrentEvent)
         {
-            if (CurrentEvent.Equals(controlCurrentEvent))
+            if (CurrentEvent.Equals(controlCurrentEvent) && _paused)
+            {
+                _paused = false;
                 _sem.Release();
+            }
         }
 
         protected abstract void Process();
